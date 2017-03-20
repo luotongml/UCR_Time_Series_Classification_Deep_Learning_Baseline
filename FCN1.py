@@ -27,7 +27,7 @@ def readucr(filename):
     return X, Y
   
 nb_epochs = 2000
-nb_epochs = 2000
+nb_epochs = 20
 
 
 #flist = ['Adiac', 'Beef', 'CBF', 'ChlorineConcentration', 'CinC_ECG_torso', 'Coffee', 'Cricket_X', 'Cricket_Y', 'Cricket_Z', 
@@ -57,7 +57,7 @@ for each in flist:
     x_train = (x_train - x_train_mean)/(x_train_std)
 
     train = np.concatenate((x_train, Y_train), axis = 1)
-    train.reshape(train.shape + (1,))
+    #train.reshape(train.shape + (1,))
 
 
     X = pd.DataFrame(train)
@@ -65,10 +65,10 @@ for each in flist:
     #print(X.columns.values)
     x_test = (x_test - x_train_mean)/(x_train_std)
     #x_train = x_train.reshape(x_train.shape + (1,))
-    #x_test = x_test.reshape(x_test.shape + (1,))
+    x_test = x_test.reshape(x_test.shape + (1,))
 
 
-    x_gen = dataio.SeriesIterator(X, labels=range(X.shape[1]-nb_classes, X.shape[1]), window=1, shuffle=True, batch_size=32)
+    iter = dataio.SeriesIterator(X, labels=range(X.shape[1]-nb_classes, X.shape[1]), window=1, shuffle=False)
 
 
 
@@ -76,7 +76,7 @@ for each in flist:
 #    drop_out = Dropout(0.2)(x)
 
     model = Sequential()
-    model.add(Conv1D(128, 8, border_mode='same', input_shape=x_train.shape[1:]))
+    model.add(Conv1D(128, 8, border_mode='same', input_shape= x_train.shape[1:]+(1,)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
@@ -94,7 +94,9 @@ for each in flist:
 
     reduce_lr = ReduceLROnPlateau(monitor = 'loss', factor=0.5,
                       patience=50, min_lr=0.0001)
-    hist = model.fit_generator(X, nb_epoch=nb_epochs, validation_data=(x_test, Y_test), callbacks=[reduce_lr])
+    steps = x_train.shape[0] / batch_size
+    hist = model.fit_generator(dataio.batch(iter, batch_size=batch_size),steps_per_epoch=steps, epochs=nb_epochs, validation_data=(x_test, Y_test), callbacks=[reduce_lr], workers=1)
+    #model.fit_generator()
     #hist = model.fit(x_train, Y_train, batch_size=batch_size, nb_epoch=nb_epochs,
      #         verbose=1, validation_data=(x_test, Y_test), callbacks = [reduce_lr])
     #Print the testing results which has the lowest training loss.
