@@ -27,7 +27,7 @@ def readucr(filename):
     return X, Y
   
 nb_epochs = 2000
-nb_epochs = 20
+nb_epochs = 2000
 
 
 #flist = ['Adiac', 'Beef', 'CBF', 'ChlorineConcentration', 'CinC_ECG_torso', 'Coffee', 'Cricket_X', 'Cricket_Y', 'Cricket_Z', 
@@ -68,7 +68,7 @@ for each in flist:
     x_test = x_test.reshape(x_test.shape + (1,))
 
 
-    iter = dataio.SeriesIterator(X, labels=range(X.shape[1]-nb_classes, X.shape[1]), window=1, shuffle=False)
+    iter = dataio.SeriesIterator(X, labels=range(X.shape[1]-nb_classes, X.shape[1]), window=1, shuffle=True)
 
 
 
@@ -95,7 +95,7 @@ for each in flist:
     reduce_lr = ReduceLROnPlateau(monitor = 'loss', factor=0.5,
                       patience=50, min_lr=0.0001)
     steps = x_train.shape[0] / batch_size
-    hist = model.fit_generator(dataio.batch(iter, batch_size=batch_size),steps_per_epoch=steps, epochs=nb_epochs, validation_data=(x_test, Y_test), callbacks=[reduce_lr], workers=1)
+    hist = model.fit_generator(dataio.batch(iter, batch_size=batch_size),samples_per_epoch=x_train.shape[0], nb_epoch=nb_epochs, validation_data=(x_test, Y_test), callbacks=[reduce_lr], nb_worker=1)
     #model.fit_generator()
     #hist = model.fit(x_train, Y_train, batch_size=batch_size, nb_epoch=nb_epochs,
      #         verbose=1, validation_data=(x_test, Y_test), callbacks = [reduce_lr])

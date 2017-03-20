@@ -44,8 +44,6 @@ class BaseSeriesIterator(object):
         self.window = window
         self.shuffle = shuffle
         self.limit = limit
-        self.lock = threading.Lock()
-
         self.len = len(df)
         self.indices = df.index
 
@@ -84,24 +82,24 @@ class SeriesIterator(BaseSeriesIterator):
     def rand_index(self):
         while True:
             curr_id = np.random.randint(0, self.len)
-            if validate_index(self.df, curr_id, window=self.window):
-                break
+            #if validate_index(self.df, curr_id, window=self.window):
+            break
         return curr_id
 
     def reset(self):
         #self.curr_id = 0
-        with self.lock:
-            self.curr_id = self.window - 1
+
+        self.curr_id = self.window - 1
         assert self.curr_id >= 0
 
     def next(self):
         curr_id = self.curr_id
+        #print("cur_id:", curr_id)
         if curr_id >= self.len:
             self.reset()
             raise StopIteration
         else:
-            with self.lock:
-                self.curr_id = self.rand_index() if self.shuffle else curr_id + 1
+            self.curr_id = self.rand_index() if self.shuffle else curr_id + 1
             df_win = self.df[curr_id - self.window + 1: curr_id + 1]
             labels = self.labels[0] if len(self.labels) == 1 else self.labels
             labels_val = self.df[labels].values[curr_id]
@@ -121,15 +119,16 @@ class SeriesIterator(BaseSeriesIterator):
 @threadsafe_generator
 def batch(iters, output_num=2, batch_size=2):
     iters.reset()
-    outs = [[] for _ in range(output_num)]
-    for sample in iters:
-        for i in range(output_num):
-            outs[i].append(sample[i])
-        if len(outs[0]) == batch_size:
+    while True:
+        outs = [[] for _ in range(output_num)]
+        for sample in iters:
+            for i in range(output_num):
+                outs[i].append(sample[i])
+            if len(outs[0]) == batch_size:
+                yield [np.array(out) for out in outs]
+                outs = [[] for _ in range(output_num)]
+        if len(outs[0]) > 0:
             yield [np.array(out) for out in outs]
-            outs = [[] for _ in range(output_num)]
-    if len(outs[0]) > 0:
-        yield [np.array(out) for out in outs]
 
 
 def main():
